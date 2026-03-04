@@ -4,6 +4,8 @@ This repository is for building the **GEO Agent**, an AI-powered system that mea
 
 The project is designed for a **live-fire hackathon challenge** with strict **live data** requirements.
 
+**Submit your project:** [Pulse AI NYC × CASTGNY Hackathon on Devpost](https://pulse-ai-castgny-hackathon.devpost.com/)
+
 ---
 
 ## 1. The New Reality: From SEO to GEO
@@ -44,10 +46,11 @@ We are building the **GEO Agent** — a live AI consultant that:
 
 ---
 
-## 3. Hard Constraint: LIVE DATA ONLY
+## 3. Hard Constraints: LIVE DATA + DEPLOYED SOLUTION
 
 This is a **live-fire** challenge. The system **must**:
 
+- **Be deployed** — Your solution must run on a publicly accessible URL. **Localhost is not allowed.** Judges must be able to use or demo your GEO Agent without running it locally.
 - **Make real API calls** (LLMs, search engines, scraping, etc.)
 - **Fetch current web content**
 - **Cite real URLs**
@@ -55,6 +58,7 @@ This is a **live-fire** challenge. The system **must**:
 
 You **may NOT**:
 
+- Run the solution only on localhost or a machine that judges cannot access
 - Hard‑code brand rankings
 - Use prebuilt static datasets
 - Fake responses
