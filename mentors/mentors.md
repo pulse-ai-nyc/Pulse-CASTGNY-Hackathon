@@ -1,6 +1,6 @@
-<h1 align="center">GEO Agent Hackathon — Judging Panel</h1>
+<h1 align="center">GEO Agent Hackathon — Mentor Panel</h1>
 
-<p align="center"><em>Meet the experts evaluating your GEO Agent.</em></p>
+<p align="center"><em>Meet the professionals who will mentor your journey in building an GEO Agent.</em></p>
 
 ---
 
