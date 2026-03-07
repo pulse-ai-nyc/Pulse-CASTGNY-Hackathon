@@ -72,4 +72,8 @@ def compute_competitors(
         )
 
     entries.sort(key=lambda e: e.mention_count, reverse=True)
-    return entries
+
+    # Keep target brand + top 10 competitors
+    target = [e for e in entries if e.is_target_brand]
+    others = [e for e in entries if not e.is_target_brand][:10]
+    return target + others
