@@ -31,6 +31,10 @@ Return ONLY a JSON array of strings, no other text:
 
     response = await anthropic_client.query(prompt, max_tokens=1024)
 
+    if response.startswith("Error:"):
+        logger.error(f"Claude returned error for query generation: {response}")
+        return _fallback_queries(category)
+
     try:
         start = response.index("[")
         end = response.rindex("]") + 1
@@ -38,10 +42,14 @@ Return ONLY a JSON array of strings, no other text:
         return queries[:num_queries]
     except (ValueError, json.JSONDecodeError) as e:
         logger.error(f"Failed to parse queries: {e}")
-        return [
-            f"best {category} tools",
-            f"top {category} software",
-            f"recommended {category} for businesses",
-            f"{category} comparison",
-            f"which {category} should I use",
-        ]
+        return _fallback_queries(category)
+
+
+def _fallback_queries(category: str) -> list[str]:
+    return [
+        f"best {category} products",
+        f"top {category} brands",
+        f"recommended {category} for beginners",
+        f"{category} comparison",
+        f"which {category} should I use",
+    ]

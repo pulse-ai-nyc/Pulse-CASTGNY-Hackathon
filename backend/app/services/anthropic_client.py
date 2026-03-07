@@ -1,52 +1,92 @@
+import asyncio
+import json
 import logging
 
-import anthropic
-
-from app.config import settings
-
 logger = logging.getLogger(__name__)
-
-_client: anthropic.AsyncAnthropic | None = None
 
 MODEL = "claude-sonnet-4-20250514"
 
 
-def _get_client() -> anthropic.AsyncAnthropic:
-    global _client
-    if _client is None:
-        _client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-    return _client
-
-
 async def query(prompt: str, system: str = "", max_tokens: int = 4096) -> str:
     try:
-        client = _get_client()
-        messages = [{"role": "user", "content": prompt}]
-        kwargs: dict = {
-            "model": MODEL,
-            "max_tokens": max_tokens,
-            "messages": messages,
-        }
+        cmd = [
+            "claude",
+            "--print",
+            "--output-format", "text",
+            "--model", MODEL,
+            "--max-turns", "1",
+        ]
         if system:
-            kwargs["system"] = system
-        response = await client.messages.create(**kwargs)
-        return response.content[0].text
+            cmd.extend(["--append-system-prompt", system])
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                proc.communicate(input=prompt.encode()), timeout=60
+            )
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            logger.error("Claude CLI timed out after 60s")
+            return "Error: Claude CLI timed out after 60s"
+
+        if proc.returncode != 0:
+            err = stderr.decode().strip()
+            logger.error(f"Claude CLI error: {err}")
+            return f"Error: {err}"
+
+        result = stdout.decode().strip()
+        if not result:
+            logger.error("Claude CLI returned empty response")
+            return "Error: Claude CLI returned empty response"
+
+        return result
+    except asyncio.TimeoutError:
+        raise
     except Exception as e:
-        logger.error(f"Anthropic query error: {e}")
+        logger.error(f"Claude CLI query error: {e}")
         return f"Error: {e}"
 
 
-async def query_with_tools(
-    messages: list[dict],
-    system: str,
-    tools: list[dict],
-    max_tokens: int = 4096,
-) -> anthropic.types.Message:
-    client = _get_client()
-    return await client.messages.create(
-        model=MODEL,
-        max_tokens=max_tokens,
-        system=system,
-        messages=messages,
-        tools=tools,
+async def query_json(prompt: str, system: str = "") -> str:
+    cmd = [
+        "claude",
+        "--print",
+        "--output-format", "json",
+        "--model", MODEL,
+        "--max-turns", "1",
+    ]
+    if system:
+        cmd.extend(["--append-system-prompt", system])
+
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
+    try:
+        stdout, stderr = await asyncio.wait_for(
+            proc.communicate(input=prompt.encode()), timeout=60
+        )
+    except asyncio.TimeoutError:
+        proc.kill()
+        await proc.wait()
+        logger.error("Claude CLI timed out after 60s")
+        return "Error: Claude CLI timed out after 60s"
+
+    if proc.returncode != 0:
+        err = stderr.decode().strip()
+        logger.error(f"Claude CLI error: {err}")
+        return f"Error: {err}"
+
+    try:
+        data = json.loads(stdout.decode())
+        return data.get("result", stdout.decode().strip())
+    except json.JSONDecodeError:
+        return stdout.decode().strip()

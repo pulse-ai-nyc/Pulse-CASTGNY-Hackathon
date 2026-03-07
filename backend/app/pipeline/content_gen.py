@@ -41,6 +41,10 @@ Use markdown formatting in the content fields."""
 
     response = await anthropic_client.query(prompt, max_tokens=4096)
 
+    if response.startswith("Error:"):
+        logger.error(f"Claude returned error for content generation: {response}")
+        return []
+
     try:
         start = response.index("[")
         end = response.rindex("]") + 1

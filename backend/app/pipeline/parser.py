@@ -31,6 +31,10 @@ Return ONLY a JSON array (empty array if no brands found):
 
     response = await anthropic_client.query(prompt, max_tokens=2048)
 
+    if response.startswith("Error:"):
+        logger.error(f"Claude returned error for parsing: {response}")
+        return []
+
     try:
         start = response.index("[")
         end = response.rindex("]") + 1

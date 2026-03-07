@@ -70,6 +70,11 @@ export default function Home() {
               <span className="text-blue-400">
                 {state.report?.brand_name || "brand"}
               </span>
+              {state.brandProfile?.category && (
+                <span className="text-sm font-normal text-zinc-400 ml-2">
+                  in {state.brandProfile.category}
+                </span>
+              )}
             </h2>
             <button
               onClick={() => window.location.reload()}

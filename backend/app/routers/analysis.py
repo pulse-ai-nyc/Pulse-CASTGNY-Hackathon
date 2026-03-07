@@ -8,6 +8,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.agent.runner import run_agent_analysis
 from app.models import AnalysisRequest, GEOReport
+from app.pipeline.brand_discovery import discover_brand
 from app.pipeline.content_gen import generate_artifacts
 from app.pipeline.metrics import compute_competitors, compute_som_metrics
 from app.pipeline.multi_source import query_single
@@ -24,15 +25,25 @@ def _sse_event(event: str, data: dict) -> dict:
 
 async def _run_analysis(request: AnalysisRequest):
     try:
-        # Phase 1: Generate queries
-        yield _sse_event("phase", {"name": "Generating queries", "step": 1, "total": 6})
+        # Phase 1: Discover brand
+        yield _sse_event("phase", {"name": "Discovering brand", "step": 1, "total": 7})
+        profile = await discover_brand(request.brand_name, request.website_url)
+        category = profile.category
+        yield _sse_event("brand_profile", {
+            "category": profile.category,
+            "description": profile.brand_description,
+            "key_products": profile.key_products,
+        })
+
+        # Phase 2: Generate queries
+        yield _sse_event("phase", {"name": "Generating queries", "step": 2, "total": 7})
         queries = await generate_queries(
-            request.brand_name, request.category, request.customer_segment
+            request.brand_name, category, request.customer_segment
         )
         yield _sse_event("queries", {"queries": queries})
 
-        # Phase 2: Query sources
-        yield _sse_event("phase", {"name": "Querying AI sources", "step": 2, "total": 6})
+        # Phase 3: Query sources
+        yield _sse_event("phase", {"name": "Querying AI sources", "step": 3, "total": 7})
         all_results = []
         for query in queries:
             results = await query_single(query)
@@ -43,12 +54,12 @@ async def _run_analysis(request: AnalysisRequest):
                     {"query": r.query, "source": r.source, "status": "complete"},
                 )
 
-        # Phase 3: Parse responses
-        yield _sse_event("phase", {"name": "Parsing responses", "step": 3, "total": 6})
+        # Phase 4: Parse responses
+        yield _sse_event("phase", {"name": "Parsing responses", "step": 4, "total": 7})
         parsed_results = await parse_all_results(all_results, request.brand_name)
 
-        # Phase 4: Compute metrics
-        yield _sse_event("phase", {"name": "Computing metrics", "step": 4, "total": 6})
+        # Phase 5: Compute metrics
+        yield _sse_event("phase", {"name": "Computing metrics", "step": 5, "total": 7})
         metrics = compute_som_metrics(parsed_results, request.brand_name)
         competitors = compute_competitors(parsed_results, request.brand_name)
 
@@ -56,14 +67,14 @@ async def _run_analysis(request: AnalysisRequest):
         for comp in competitors:
             yield _sse_event("competitor", comp.model_dump())
 
-        # Phase 5: Agent analysis
-        yield _sse_event("phase", {"name": "AI analysis & recommendations", "step": 5, "total": 6})
+        # Phase 6: Agent analysis
+        yield _sse_event("phase", {"name": "AI analysis & recommendations", "step": 6, "total": 7})
         recommendations = []
         analysis_narrative = ""
 
         async for event in run_agent_analysis(
             brand_name=request.brand_name,
-            category=request.category,
+            category=category,
             metrics=metrics,
             competitors=competitors,
             evidence=parsed_results,
@@ -76,10 +87,10 @@ async def _run_analysis(request: AnalysisRequest):
                 recommendations.append(rec)
                 yield _sse_event("recommendation", rec.model_dump())
 
-        # Phase 6: Content generation
-        yield _sse_event("phase", {"name": "Generating content", "step": 6, "total": 6})
+        # Phase 7: Content generation
+        yield _sse_event("phase", {"name": "Generating content", "step": 7, "total": 7})
         content_artifacts = await generate_artifacts(
-            request.brand_name, request.category, metrics, competitors
+            request.brand_name, category, metrics, competitors
         )
         for artifact in content_artifacts:
             yield _sse_event("content", artifact.model_dump())
@@ -88,7 +99,7 @@ async def _run_analysis(request: AnalysisRequest):
         report = GEOReport(
             id=str(uuid.uuid4()),
             brand_name=request.brand_name,
-            category=request.category,
+            category=category,
             created_at=datetime.now(timezone.utc).isoformat(),
             metrics=metrics,
             competitors=competitors,

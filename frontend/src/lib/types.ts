@@ -1,7 +1,13 @@
 export interface AnalysisRequest {
   brand_name: string;
-  category: string;
+  website_url: string;
   customer_segment?: string;
+}
+
+export interface BrandProfileEvent {
+  category: string;
+  description: string;
+  key_products: string[];
 }
 
 export interface BrandMention {

@@ -1,16 +1,59 @@
 import json
 import logging
+import re
 from collections.abc import AsyncGenerator
 
 from app.agent.prompts import SYSTEM_PROMPT, build_analysis_prompt
-from app.agent.tools import TOOL_DEFINITIONS, execute_tool
+from app.agent.tools import execute_tool
 from app.models.metrics import CompetitorEntry, QueryResult, SoMMetrics
 from app.models.report import Recommendation
 from app.services import anthropic_client
 
 logger = logging.getLogger(__name__)
 
-MAX_AGENT_TURNS = 10
+MAX_AGENT_TURNS = 6
+
+TOOL_DISPATCH_INSTRUCTIONS = """
+When you need to use a tool, output EXACTLY this format on its own line:
+TOOL_CALL: {"tool": "<tool_name>", "input": {<input_json>}}
+
+Available tools:
+- tavily_search: {"tool": "tavily_search", "input": {"query": "search terms"}}
+- tavily_extract: {"tool": "tavily_extract", "input": {"url": "https://..."}}
+- check_website_schema: {"tool": "check_website_schema", "input": {"url": "https://..."}}
+- check_wikipedia_presence: {"tool": "check_wikipedia_presence", "input": {"brand_name": "Brand"}}
+
+After each TOOL_CALL line, STOP and wait. The tool result will be provided to you.
+You may make multiple tool calls across turns. When done investigating, provide your final analysis.
+"""
+
+_TOOL_CALL_RE = re.compile(r"TOOL_CALL\s*:\s*", re.IGNORECASE)
+
+
+def _extract_tool_json(text: str, start: int) -> dict | None:
+    """Extract JSON object starting from position `start` using brace-depth matching."""
+    # Strip optional markdown fences
+    remaining = text[start:].lstrip()
+    if remaining.startswith("```"):
+        remaining = re.sub(r"^```\w*\n?", "", remaining)
+        remaining = re.sub(r"\n?```\s*$", "", remaining)
+
+    brace_start = remaining.find("{")
+    if brace_start == -1:
+        return None
+
+    depth = 0
+    for i in range(brace_start, len(remaining)):
+        if remaining[i] == "{":
+            depth += 1
+        elif remaining[i] == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(remaining[brace_start : i + 1])
+                except json.JSONDecodeError:
+                    return None
+    return None
 
 
 async def run_agent_analysis(
@@ -35,51 +78,57 @@ async def run_agent_analysis(
         evidence_summary=evidence_summary,
     )
 
-    messages: list[dict] = [{"role": "user", "content": user_prompt}]
+    system = SYSTEM_PROMPT + "\n\n" + TOOL_DISPATCH_INSTRUCTIONS
+    conversation = user_prompt
+    full_text = ""
 
     for turn in range(MAX_AGENT_TURNS):
-        response = await anthropic_client.query_with_tools(
-            messages=messages,
-            system=SYSTEM_PROMPT,
-            tools=TOOL_DEFINITIONS,
-            max_tokens=4096,
-        )
+        response = await anthropic_client.query(conversation, system=system)
 
-        assistant_content = response.content
-        messages.append({"role": "assistant", "content": assistant_content})
-
-        for block in assistant_content:
-            if block.type == "text":
-                yield {"type": "analysis_chunk", "text": block.text}
-
-        if response.stop_reason == "end_turn":
+        if response.startswith("Error:"):
+            logger.error(f"Agent turn {turn} got error: {response}")
+            yield {"type": "analysis_chunk", "text": f"[Agent error, continuing...]\n"}
             break
 
-        if response.stop_reason == "tool_use":
-            tool_results = []
-            for block in assistant_content:
-                if block.type == "tool_use":
-                    logger.info(f"Agent calling tool: {block.name}")
-                    result = await execute_tool(block.name, block.input)
-                    tool_results.append(
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": result,
-                        }
-                    )
-            messages.append({"role": "user", "content": tool_results})
+        full_text += response + "\n"
 
-    full_text = ""
-    for msg in messages:
-        if msg["role"] == "assistant":
-            content = msg["content"]
-            if isinstance(content, list):
-                for block in content:
-                    if hasattr(block, "text"):
-                        full_text += block.text
-            elif isinstance(content, str):
-                full_text += content
+        # Find tool call using regex (handles variations like no space after colon)
+        match = _TOOL_CALL_RE.search(response)
+        tool_call_found = False
+
+        if match:
+            # Yield text before the tool call
+            pre_text = response[: match.start()].strip()
+            if pre_text:
+                yield {"type": "analysis_chunk", "text": pre_text + "\n"}
+
+            tool_data = _extract_tool_json(response, match.end())
+            if tool_data and "tool" in tool_data:
+                tool_call_found = True
+                tool_name = tool_data["tool"]
+                tool_input = tool_data.get("input", {})
+                logger.info(f"Agent calling tool: {tool_name}")
+
+                try:
+                    result = await execute_tool(tool_name, tool_input)
+                except Exception as e:
+                    logger.error(f"Tool execution error ({tool_name}): {e}")
+                    result = f"Error executing tool: {e}"
+
+                conversation = (
+                    f"Previous context:\n{conversation}\n\n"
+                    f"Your previous response:\n{response}\n\n"
+                    f"Tool result for {tool_name}:\n{result}\n\n"
+                    f"Continue your analysis. Use more tools if needed, "
+                    f"or provide your final analysis with RECOMMENDATIONS_JSON."
+                )
+            else:
+                logger.error(f"Found TOOL_CALL marker but failed to parse JSON")
+                tool_call_found = False
+
+        if not tool_call_found:
+            yield {"type": "analysis_chunk", "text": response}
+            break
 
     recommendations = _extract_recommendations(full_text)
     for rec in recommendations:
@@ -91,7 +140,7 @@ def _extract_recommendations(text: str) -> list[Recommendation]:
     idx = text.find(marker)
     if idx == -1:
         return []
-    json_text = text[idx + len(marker) :]
+    json_text = text[idx + len(marker):]
     try:
         start = json_text.index("[")
         end = json_text.rindex("]") + 1

@@ -5,6 +5,7 @@ import { API_BASE_URL } from "@/lib/api";
 import type {
   AnalysisRequest,
   PhaseEvent,
+  BrandProfileEvent,
   SoMMetrics,
   CompetitorEntry,
   Recommendation,
@@ -16,6 +17,7 @@ import type {
 export interface AnalysisState {
   status: "idle" | "running" | "complete" | "error";
   phase: PhaseEvent | null;
+  brandProfile: BrandProfileEvent | null;
   queries: string[];
   sourceResults: SourceResultEvent[];
   metrics: SoMMetrics | null;
@@ -30,6 +32,7 @@ export interface AnalysisState {
 const initialState: AnalysisState = {
   status: "idle",
   phase: null,
+  brandProfile: null,
   queries: [],
   sourceResults: [],
   metrics: null,
@@ -119,6 +122,12 @@ function handleEvent(
   switch (event) {
     case "phase":
       setState((prev) => ({ ...prev, phase: data as unknown as PhaseEvent }));
+      break;
+    case "brand_profile":
+      setState((prev) => ({
+        ...prev,
+        brandProfile: data as unknown as BrandProfileEvent,
+      }));
       break;
     case "queries":
       setState((prev) => ({

@@ -10,6 +10,7 @@ interface Props {
 }
 
 const PHASE_NAMES = [
+  "Discovering brand",
   "Generating queries",
   "Querying AI sources",
   "Parsing responses",
@@ -47,7 +48,7 @@ export default function ProgressStream({
               >
                 {isComplete ? "\u2713" : step}
               </div>
-              {step < 6 && (
+              {step < 7 && (
                 <div
                   className={`w-0.5 h-6 ${
                     isComplete ? "bg-green-500/40" : "bg-zinc-700"
@@ -67,12 +68,12 @@ export default function ProgressStream({
               >
                 {name}
               </p>
-              {isActive && step === 1 && queries.length > 0 && (
+              {isActive && step === 2 && queries.length > 0 && (
                 <p className="text-xs text-zinc-500 mt-1">
                   {queries.length} queries generated
                 </p>
               )}
-              {isActive && step === 2 && (
+              {isActive && step === 3 && (
                 <p className="text-xs text-zinc-500 mt-1">
                   {sourceResults.length} responses received
                 </p>
