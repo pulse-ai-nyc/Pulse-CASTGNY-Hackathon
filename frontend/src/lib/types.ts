@@ -58,7 +58,13 @@ export interface Recommendation {
 }
 
 export interface ContentArtifact {
-  type: "wikipedia_summary" | "comparison_page" | "faq_content" | "schema_markup";
+  type:
+    | "wikipedia_summary"
+    | "comparison_page"
+    | "faq_content"
+    | "schema_markup"
+    | "answer_ready_snippets"
+    | "keyword_alignment";
   title: string;
   content: string;
 }

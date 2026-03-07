@@ -13,52 +13,36 @@ export default function CompetitorTable({ competitors }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("share_of_voice");
   const [sortAsc, setSortAsc] = useState(false);
 
-  const sorted = [...competitors].sort((a, b) => {
-    const diff = sortAsc
-      ? a[sortKey] - b[sortKey]
-      : b[sortKey] - a[sortKey];
-    return diff;
-  });
+  const sorted = [...competitors].sort((a, b) =>
+    sortAsc ? a[sortKey] - b[sortKey] : b[sortKey] - a[sortKey]
+  );
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortAsc(!sortAsc);
-    else {
-      setSortKey(key);
-      setSortAsc(false);
-    }
+    else { setSortKey(key); setSortAsc(false); }
   };
 
-  const SortHeader = ({
-    label,
-    field,
-  }: {
-    label: string;
-    field: SortKey;
-  }) => (
-    <th
-      className="px-4 py-3 text-left text-xs font-medium text-zinc-400 cursor-pointer hover:text-white select-none"
-      onClick={() => toggleSort(field)}
-    >
-      {label} {sortKey === field ? (sortAsc ? "\u2191" : "\u2193") : ""}
-    </th>
-  );
-
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-      <h3 className="text-sm font-medium text-zinc-400 px-6 py-4 border-b border-zinc-800">
-        Competitor Analysis
-      </h3>
+    <div className="card overflow-hidden">
+      <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
+        <p className="text-[11px] font-[family-name:var(--font-mono)] font-500 tracking-wider uppercase text-[var(--color-ink-muted)]">
+          Competitor Analysis
+        </p>
+        <span className="text-[11px] text-[var(--color-ink-faint)]">
+          {competitors.length} brands
+        </span>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-zinc-900/50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400">
+          <thead>
+            <tr className="bg-[var(--color-surface-alt)]">
+              <th className="text-left px-6 py-3 text-[11px] font-500 text-[var(--color-ink-muted)]">
                 Brand
               </th>
-              <SortHeader label="Mentions" field="mention_count" />
-              <SortHeader label="Share of Voice" field="share_of_voice" />
-              <SortHeader label="Avg Position" field="average_position" />
-              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400">
+              <SortTh label="Mentions" field="mention_count" current={sortKey} asc={sortAsc} onSort={toggleSort} />
+              <SortTh label="Share of Voice" field="share_of_voice" current={sortKey} asc={sortAsc} onSort={toggleSort} />
+              <SortTh label="Avg Position" field="average_position" current={sortKey} asc={sortAsc} onSort={toggleSort} />
+              <th className="text-left px-6 py-3 text-[11px] font-500 text-[var(--color-ink-muted)]">
                 Sentiment
               </th>
             </tr>
@@ -67,29 +51,41 @@ export default function CompetitorTable({ competitors }: Props) {
             {sorted.map((c) => (
               <tr
                 key={c.brand_name}
-                className={`border-t border-zinc-800 ${
-                  c.is_target_brand ? "bg-blue-500/5" : ""
+                className={`border-t border-[var(--color-border)] transition-colors hover:bg-[var(--color-surface-alt)]/50 ${
+                  c.is_target_brand ? "bg-[var(--color-accent-light)]/50" : ""
                 }`}
               >
-                <td className="px-4 py-3 text-sm font-medium text-white">
-                  {c.brand_name}
-                  {c.is_target_brand && (
-                    <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded">
-                      TARGET
-                    </span>
-                  )}
+                <td className="px-6 py-3.5 text-[13px] font-500 text-[var(--color-ink)]">
+                  <span className="flex items-center gap-2">
+                    {c.brand_name}
+                    {c.is_target_brand && (
+                      <span className="text-[9px] font-[family-name:var(--font-mono)] font-500 px-1.5 py-0.5 rounded bg-[var(--color-accent-light)] text-[var(--color-accent)] border border-[var(--color-accent-wash)]">
+                        TARGET
+                      </span>
+                    )}
+                  </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-zinc-300">
+                <td className="px-6 py-3.5 text-[13px] font-[family-name:var(--font-mono)] text-[var(--color-ink-secondary)]">
                   {c.mention_count}
                 </td>
-                <td className="px-4 py-3 text-sm text-zinc-300">
-                  {c.share_of_voice.toFixed(1)}%
+                <td className="px-6 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-16 h-1.5 rounded-full bg-[var(--color-surface-alt)] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-[var(--color-accent)] transition-all"
+                        style={{ width: `${Math.min(c.share_of_voice, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-[13px] font-[family-name:var(--font-mono)] text-[var(--color-ink-secondary)]">
+                      {c.share_of_voice.toFixed(1)}%
+                    </span>
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-zinc-300">
+                <td className="px-6 py-3.5 text-[13px] font-[family-name:var(--font-mono)] text-[var(--color-ink-secondary)]">
                   #{c.average_position.toFixed(1)}
                 </td>
-                <td className="px-4 py-3">
-                  <SentimentBar breakdown={c.sentiment_breakdown} />
+                <td className="px-6 py-3.5">
+                  <MiniSentiment breakdown={c.sentiment_breakdown} />
                 </td>
               </tr>
             ))}
@@ -100,29 +96,34 @@ export default function CompetitorTable({ competitors }: Props) {
   );
 }
 
-function SentimentBar({
-  breakdown,
+function SortTh({
+  label, field, current, asc, onSort,
 }: {
-  breakdown: { positive: number; neutral: number; negative: number };
+  label: string; field: SortKey; current: SortKey; asc: boolean;
+  onSort: (k: SortKey) => void;
 }) {
-  const total = breakdown.positive + breakdown.neutral + breakdown.negative;
-  if (total === 0) return <span className="text-xs text-zinc-500">-</span>;
-
-  const pPos = (breakdown.positive / total) * 100;
-  const pNeu = (breakdown.neutral / total) * 100;
-  const pNeg = (breakdown.negative / total) * 100;
-
+  const isActive = current === field;
   return (
-    <div className="flex h-2 w-24 rounded-full overflow-hidden bg-zinc-800">
-      {pPos > 0 && (
-        <div className="bg-green-500" style={{ width: `${pPos}%` }} />
+    <th
+      className="text-left px-6 py-3 text-[11px] font-500 text-[var(--color-ink-muted)] cursor-pointer hover:text-[var(--color-ink)] select-none transition-colors"
+      onClick={() => onSort(field)}
+    >
+      {label}
+      {isActive && (
+        <span className="ml-1 text-[var(--color-accent)]">{asc ? "\u2191" : "\u2193"}</span>
       )}
-      {pNeu > 0 && (
-        <div className="bg-yellow-500" style={{ width: `${pNeu}%` }} />
-      )}
-      {pNeg > 0 && (
-        <div className="bg-red-500" style={{ width: `${pNeg}%` }} />
-      )}
+    </th>
+  );
+}
+
+function MiniSentiment({ breakdown }: { breakdown: { positive: number; neutral: number; negative: number } }) {
+  const total = breakdown.positive + breakdown.neutral + breakdown.negative;
+  if (total === 0) return <span className="text-[11px] text-[var(--color-ink-faint)]">-</span>;
+  return (
+    <div className="flex h-1.5 w-20 rounded-full overflow-hidden bg-[var(--color-surface-alt)]">
+      {breakdown.positive > 0 && <div className="bg-[var(--color-success)]" style={{ width: `${(breakdown.positive / total) * 100}%` }} />}
+      {breakdown.neutral > 0 && <div className="bg-[var(--color-warning)]" style={{ width: `${(breakdown.neutral / total) * 100}%` }} />}
+      {breakdown.negative > 0 && <div className="bg-[var(--color-danger)]" style={{ width: `${(breakdown.negative / total) * 100}%` }} />}
     </div>
   );
 }

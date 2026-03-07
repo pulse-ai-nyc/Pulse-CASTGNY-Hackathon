@@ -18,53 +18,48 @@ export default function BrandInputForm({ onSubmit, isLoading }: Props) {
     onSubmit({ brand_name: brandName.trim(), website_url: websiteUrl.trim() });
   };
 
+  const ready = brandName.trim() && websiteUrl.trim() && !isLoading;
+
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-lg space-y-6">
-      <div>
-        <label
-          htmlFor="brand"
-          className="block text-sm font-medium text-zinc-300 mb-2"
+    <form onSubmit={handleSubmit} className="w-full space-y-4">
+      <div className="card p-1.5 flex flex-col sm:flex-row gap-1.5">
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            value={brandName}
+            onChange={(e) => setBrandName(e.target.value)}
+            placeholder="Brand name"
+            className="w-full h-12 px-4 bg-[var(--color-surface-alt)] rounded-lg text-[15px] text-[var(--color-ink)] placeholder-[var(--color-ink-faint)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/20 focus:bg-white transition-all"
+            disabled={isLoading}
+            required
+          />
+        </div>
+        <div className="flex-1 relative">
+          <input
+            type="url"
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+            placeholder="https://example.com"
+            className="w-full h-12 px-4 bg-[var(--color-surface-alt)] rounded-lg text-[15px] text-[var(--color-ink)] placeholder-[var(--color-ink-faint)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/20 focus:bg-white transition-all font-[family-name:var(--font-mono)] text-[13px]"
+            disabled={isLoading}
+            required
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={!ready}
+          className="h-12 px-7 rounded-lg font-[family-name:var(--font-display)] font-600 text-[14px] tracking-tight transition-all whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] active:scale-[0.98]"
         >
-          Brand Name
-        </label>
-        <input
-          id="brand"
-          type="text"
-          value={brandName}
-          onChange={(e) => setBrandName(e.target.value)}
-          placeholder="e.g. Rhode, Notion, Stripe"
-          className="w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          disabled={isLoading}
-          required
-        />
+          {isLoading ? (
+            <span className="flex items-center gap-2">
+              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Analyzing
+            </span>
+          ) : (
+            "Analyze"
+          )}
+        </button>
       </div>
-
-      <div>
-        <label
-          htmlFor="website"
-          className="block text-sm font-medium text-zinc-300 mb-2"
-        >
-          Website URL
-        </label>
-        <input
-          id="website"
-          type="url"
-          value={websiteUrl}
-          onChange={(e) => setWebsiteUrl(e.target.value)}
-          placeholder="e.g. https://www.rhodeskin.com/"
-          className="w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          disabled={isLoading}
-          required
-        />
-      </div>
-
-      <button
-        type="submit"
-        disabled={isLoading || !brandName.trim() || !websiteUrl.trim()}
-        className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-medium rounded-lg transition-colors"
-      >
-        {isLoading ? "Analyzing..." : "Analyze Brand Visibility"}
-      </button>
     </form>
   );
 }

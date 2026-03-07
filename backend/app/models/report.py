@@ -15,7 +15,14 @@ class Recommendation(BaseModel):
 
 
 class ContentArtifact(BaseModel):
-    type: Literal["wikipedia_summary", "comparison_page", "faq_content", "schema_markup"]
+    type: Literal[
+        "wikipedia_summary",
+        "comparison_page",
+        "faq_content",
+        "schema_markup",
+        "answer_ready_snippets",
+        "keyword_alignment",
+    ]
     title: str
     content: str
 

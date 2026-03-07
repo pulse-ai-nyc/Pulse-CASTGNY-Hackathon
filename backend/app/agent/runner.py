@@ -11,7 +11,7 @@ from app.services import anthropic_client
 
 logger = logging.getLogger(__name__)
 
-MAX_AGENT_TURNS = 6
+MAX_AGENT_TURNS = 10
 
 TOOL_DISPATCH_INSTRUCTIONS = """
 When you need to use a tool, output EXACTLY this format on its own line:
@@ -22,9 +22,12 @@ Available tools:
 - tavily_extract: {"tool": "tavily_extract", "input": {"url": "https://..."}}
 - check_website_schema: {"tool": "check_website_schema", "input": {"url": "https://..."}}
 - check_wikipedia_presence: {"tool": "check_wikipedia_presence", "input": {"brand_name": "Brand"}}
+- check_press_reviews: {"tool": "check_press_reviews", "input": {"brand_name": "Brand", "category": "Category"}}
+- check_crawlability: {"tool": "check_crawlability", "input": {"url": "https://..."}}
+- check_content_freshness: {"tool": "check_content_freshness", "input": {"url": "https://..."}}
 
 After each TOOL_CALL line, STOP and wait. The tool result will be provided to you.
-You may make multiple tool calls across turns. When done investigating, provide your final analysis.
+You may make multiple tool calls across turns (up to 10). When done investigating, provide your final analysis.
 """
 
 _TOOL_CALL_RE = re.compile(r"TOOL_CALL\s*:\s*", re.IGNORECASE)

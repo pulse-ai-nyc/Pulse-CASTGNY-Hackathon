@@ -6,16 +6,16 @@ interface Props {
   recommendations: Recommendation[];
 }
 
-const IMPACT_COLORS = {
-  high: "text-green-400 bg-green-500/10",
-  medium: "text-yellow-400 bg-yellow-500/10",
-  low: "text-zinc-400 bg-zinc-700",
+const IMPACT_STYLE = {
+  high: { bg: "bg-[var(--color-success-light)]", text: "text-[var(--color-success)]", border: "border-[var(--color-success-wash)]" },
+  medium: { bg: "bg-[var(--color-warning-light)]", text: "text-[var(--color-warning)]", border: "border-[var(--color-warning-wash)]" },
+  low: { bg: "bg-[var(--color-surface-alt)]", text: "text-[var(--color-ink-muted)]", border: "border-[var(--color-border)]" },
 };
 
-const EFFORT_COLORS = {
-  low: "text-green-400 bg-green-500/10",
-  medium: "text-yellow-400 bg-yellow-500/10",
-  high: "text-red-400 bg-red-500/10",
+const EFFORT_STYLE = {
+  low: { bg: "bg-[var(--color-success-light)]", text: "text-[var(--color-success)]", border: "border-[var(--color-success-wash)]" },
+  medium: { bg: "bg-[var(--color-warning-light)]", text: "text-[var(--color-warning)]", border: "border-[var(--color-warning-wash)]" },
+  high: { bg: "bg-[var(--color-danger-light)]", text: "text-[var(--color-danger)]", border: "border-[var(--color-danger-wash)]" },
 };
 
 export default function ActionPlan({ recommendations }: Props) {
@@ -29,49 +29,56 @@ export default function ActionPlan({ recommendations }: Props) {
   });
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-      <h3 className="text-sm font-medium text-zinc-400 mb-4">
-        Action Plan ({recommendations.length} recommendations)
-      </h3>
-      <div className="space-y-4">
-        {sorted.map((rec, i) => (
-          <div
-            key={i}
-            className="border border-zinc-800 rounded-lg p-4 space-y-3"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h4 className="text-sm font-medium text-white">{rec.title}</h4>
-                <p className="text-xs text-zinc-500 mt-0.5">{rec.category}</p>
+    <div className="card overflow-hidden">
+      <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
+        <p className="text-[11px] font-[family-name:var(--font-mono)] font-500 tracking-wider uppercase text-[var(--color-ink-muted)]">
+          Action Plan
+        </p>
+        <span className="text-[11px] text-[var(--color-ink-faint)]">
+          {recommendations.length} recommendations
+        </span>
+      </div>
+
+      <div className="divide-y divide-[var(--color-border)]">
+        {sorted.map((rec, i) => {
+          const impact = IMPACT_STYLE[rec.impact];
+          const effort = EFFORT_STYLE[rec.effort];
+
+          return (
+            <div key={i} className="px-6 py-5 hover:bg-[var(--color-surface-alt)]/30 transition-colors">
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <div>
+                  <h4 className="text-[14px] font-600 text-[var(--color-ink)]">
+                    {rec.title}
+                  </h4>
+                  <p className="text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-ink-muted)] mt-0.5">
+                    {rec.category}
+                  </p>
+                </div>
+                <div className="flex gap-1.5 shrink-0">
+                  <span className={`text-[10px] font-[family-name:var(--font-mono)] font-500 px-2 py-0.5 rounded border ${impact.bg} ${impact.text} ${impact.border}`}>
+                    {rec.impact} impact
+                  </span>
+                  <span className={`text-[10px] font-[family-name:var(--font-mono)] font-500 px-2 py-0.5 rounded border ${effort.bg} ${effort.text} ${effort.border}`}>
+                    {rec.effort} effort
+                  </span>
+                </div>
               </div>
-              <div className="flex gap-2 shrink-0">
-                <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${IMPACT_COLORS[rec.impact]}`}
-                >
-                  Impact: {rec.impact}
-                </span>
-                <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${EFFORT_COLORS[rec.effort]}`}
-                >
-                  Effort: {rec.effort}
-                </span>
-              </div>
+              <p className="text-[13px] text-[var(--color-ink-secondary)] leading-relaxed mb-3">
+                {rec.description}
+              </p>
+              {rec.action_steps.length > 0 && (
+                <ol className="space-y-1 pl-4">
+                  {rec.action_steps.map((step, j) => (
+                    <li key={j} className="text-[12px] text-[var(--color-ink-muted)] list-decimal leading-relaxed">
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              )}
             </div>
-            <p className="text-xs text-zinc-400">{rec.description}</p>
-            {rec.action_steps.length > 0 && (
-              <ol className="space-y-1.5 ml-4">
-                {rec.action_steps.map((step, j) => (
-                  <li
-                    key={j}
-                    className="text-xs text-zinc-400 list-decimal"
-                  >
-                    {step}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

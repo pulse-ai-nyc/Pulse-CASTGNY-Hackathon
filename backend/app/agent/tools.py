@@ -1,4 +1,6 @@
+import json
 import logging
+import re
 
 import aiohttp
 
@@ -52,6 +54,40 @@ TOOL_DEFINITIONS = [
             "required": ["brand_name"],
         },
     },
+    {
+        "name": "check_press_reviews",
+        "description": "Search for recent press coverage, news articles, and review-site presence for a brand.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "brand_name": {"type": "string", "description": "Brand name to search press/reviews for"},
+                "category": {"type": "string", "description": "Brand category for context"},
+            },
+            "required": ["brand_name"],
+        },
+    },
+    {
+        "name": "check_crawlability",
+        "description": "Check if a URL returns clean, extractable text content (not JS-only or login-walled).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "URL to check crawlability for"},
+            },
+            "required": ["url"],
+        },
+    },
+    {
+        "name": "check_content_freshness",
+        "description": "Check last-modified date and content recency signals for a URL.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "URL to check freshness for"},
+            },
+            "required": ["url"],
+        },
+    },
 ]
 
 
@@ -81,7 +117,6 @@ async def execute_tool(name: str, input_data: dict) -> str:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                     html = await resp.text()
-            import re
             ld_json_blocks = re.findall(
                 r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
                 html,
@@ -102,6 +137,75 @@ async def execute_tool(name: str, input_data: dict) -> str:
                         data = await resp.json()
                         return f"Wikipedia article found: {data.get('title', '')}\n\n{data.get('extract', '')}"
                     return f"No Wikipedia article found for '{brand}'."
+
+        elif name == "check_press_reviews":
+            brand = input_data["brand_name"]
+            category = input_data.get("category", "")
+            # Search for press coverage
+            press_result = await tavily_client.search(
+                f'"{brand}" review OR press OR coverage OR news {category}',
+                max_results=5,
+            )
+            # Search for review site presence
+            review_result = await tavily_client.search(
+                f'"{brand}" site:g2.com OR site:trustpilot.com OR site:capterra.com OR site:yelp.com',
+                max_results=5,
+            )
+            formatted = "## Press & News Coverage:\n"
+            for r in press_result.get("results", [])[:5]:
+                formatted += f"- {r.get('title', '')}: {r.get('url', '')}\n  {r.get('content', '')[:150]}\n"
+            formatted += "\n## Review Site Presence:\n"
+            review_results = review_result.get("results", [])
+            if review_results:
+                for r in review_results[:5]:
+                    formatted += f"- {r.get('title', '')}: {r.get('url', '')}\n"
+            else:
+                formatted += "- No review site profiles found.\n"
+            return formatted
+
+        elif name == "check_crawlability":
+            url = input_data["url"]
+            result = await tavily_client.extract(url)
+            results = result.get("results", [])
+            if results:
+                content = results[0].get("raw_content", "")
+                word_count = len(content.split())
+                if word_count > 50:
+                    return f"Crawlable: YES — extracted {word_count} words of clean text content."
+                elif word_count > 0:
+                    return f"Partially crawlable: Only {word_count} words extracted. Content may be JS-rendered or behind a wall."
+                else:
+                    return "NOT crawlable: No text content could be extracted. Likely JS-only or login-walled."
+            return "NOT crawlable: Extraction failed entirely."
+
+        elif name == "check_content_freshness":
+            url = input_data["url"]
+            headers_info = ""
+            async with aiohttp.ClientSession() as session:
+                async with session.head(url, timeout=aiohttp.ClientTimeout(total=10), allow_redirects=True) as resp:
+                    last_modified = resp.headers.get("Last-Modified", "Not provided")
+                    date = resp.headers.get("Date", "Not provided")
+                    cache_control = resp.headers.get("Cache-Control", "Not provided")
+                    headers_info = (
+                        f"Last-Modified: {last_modified}\n"
+                        f"Date: {date}\n"
+                        f"Cache-Control: {cache_control}\n"
+                    )
+            # Also check page content for date signals
+            extract_result = await tavily_client.extract(url)
+            date_signals = ""
+            if extract_result.get("results"):
+                content = extract_result["results"][0].get("raw_content", "")[:2000]
+                # Look for date patterns
+                dates_found = re.findall(
+                    r'(?:updated|published|modified|date)[:\s]*(\d{4}[-/]\d{1,2}[-/]\d{1,2}|\w+ \d{1,2},? \d{4})',
+                    content, re.IGNORECASE
+                )
+                if dates_found:
+                    date_signals = f"Dates found in content: {', '.join(dates_found[:5])}"
+                else:
+                    date_signals = "No publish/update dates found in page content."
+            return f"HTTP Headers:\n{headers_info}\n{date_signals}"
 
         return f"Unknown tool: {name}"
     except Exception as e:
