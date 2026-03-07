@@ -149,7 +149,21 @@ This must be **programmatic**, not manually typed advice.
 
 ---
 
-## 6. What Makes This an AGENT (Not Just a Script)
+## 6. Recommended Tech Stack
+
+To adhere to the live data requirement, you will need retrieval tools in your stack. **Tavily AI** is our hackathon sponsor and the recommended starting point:
+
+- **[Tavily API](https://tavily.com/)** (Hackathon Sponsor) — Search API optimized for AI agents. Returns clean, structured text from web results. Ideal for querying "Best [category]" and extracting which brands are mentioned. Tavily also supports **content extraction** from specific URLs. We strongly encourage participants to try Tavily — it was purpose-built for the kind of agent you're building today. Tavily offers a **free tier** that should be more than enough for this hackathon.
+- **[Perplexity API](https://docs.perplexity.ai/)** — Get the synthesized answer currently being served to users, with citations.
+- **[Exa.ai](https://exa.ai/)** — Semantic search for finding similar links and content.
+- **[Firecrawl](https://firecrawl.dev/)** — Turn any website URL into clean markdown for your agent to read.
+- **LLM APIs** — OpenAI, Anthropic, Google Gemini, etc. for query generation, entity extraction, and report synthesis.
+
+You are free to use any combination of tools, but your agent **must** fetch live data from at least one external source.
+
+---
+
+## 7. What Makes This an AGENT (Not Just a Script)
 
 The GEO Agent should:
 
@@ -169,7 +183,7 @@ Nice‑to‑have / bonus capabilities:
 
 ---
 
-## 7. Expected Demo Format
+## 8. Expected Demo Format
 
 At demo time, you must show:
 
@@ -190,31 +204,31 @@ At demo time, you must show:
 
 ---
 
-## 8. Judging Criteria
+## 9. Judging Criteria
 
 You will be scored on:
 
-### 8.1 Reliability (30%)
+### 9.1 Reliability (30%)
 
 - Uses **live data** and real APIs
 - Provides **proper citations**
 - Produces **repeatable** results
 - Shows **transparent reasoning** (how conclusions were reached)
 
-### 8.2 Insight Quality (25%)
+### 9.2 Insight Quality (25%)
 
 - Findings are **non‑obvious** and interesting
 - Competitor analysis is **real**, not generic
 - Strategy **logically follows** from evidence
 
-### 8.3 Technical Robustness (25%)
+### 9.3 Technical Robustness (25%)
 
 - Quality of **tool orchestration**
 - Level of **automation**
 - **Error handling** strategy
 - **Model usage sophistication** (e.g., multi‑step reasoning, multiple providers)
 
-### 8.4 Clarity to the CEO (20%)
+### 9.4 Clarity to the CEO (20%)
 
 - Non‑technical execs can **understand the output**
 - Report is **structured** and easy to scan
@@ -222,7 +236,7 @@ You will be scored on:
 
 ---
 
-## 9. What Winning Teams Usually Do
+## 10. What Winning Teams Usually Do
 
 Winning teams typically:
 
@@ -241,7 +255,7 @@ Teams that struggle often:
 
 ---
 
-## 10. Optional Advanced Layer (If Time Allows)
+## 11. Optional Advanced Layer (If Time Allows)
 
 If the core MVP is complete, consider:
 
@@ -253,7 +267,7 @@ If the core MVP is complete, consider:
 
 ---
 
-## 11. Implementation Notes (For This Repo)
+## 12. Implementation Notes (For This Repo)
 
 When implementing the GEO Agent in this repository, aim to:
 
